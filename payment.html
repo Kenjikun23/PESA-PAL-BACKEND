@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Payment - Noble Nectar</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f9f9f9;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    h2 {
+      color: #222;
+    }
+
+    button {
+      background-color: gold;
+      color: #000;
+      padding: 12px 25px;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 20px;
+      border-radius: 5px;
+    }
+
+    button:hover {
+      background-color: #ffc107;
+    }
+
+    #status {
+      margin-top: 30px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h2>Processing Your Payment...</h2>
+  <p>Please wait while we redirect you to M-Pesa via Pesapal.</p>
+
+  <button id="payBtn">Pay Now</button>
+
+  <div id="status"></div>
+
+  <script>
+    document.getElementById("payBtn").addEventListener("click", async () => {
+      const status = document.getElementById("status");
+      status.innerText = "Getting payment token...";
+
+      try {
+        const tokenRes = await fetch("/get-token");
+        const tokenData = await tokenRes.json();
+        const token = tokenData.token;
+
+        status.innerText = "Redirecting to Pesapal checkout...";
+
+        const payload = {
+          id: Date.now().toString(),
+          currency: "KES",
+          amount: "500", // You can change this to dynamic amount
+          description: "Noble Nectar Juice Order",
+          callback_url: window.location.origin + "/callback",
+          notification_id: "123456789", // Placeholder
+          billing_address: {
+            email_address: "customer@example.com",
+            phone_number: "0712345678",
+            country_code: "KE",
+            first_name: "Noble",
+            last_name: "Customer",
+            line_1: "Nairobi",
+            city: "Nairobi",
+            state: "Nairobi",
+            postal_code: "00100",
+            zip_code: "00100"
+          }
+        };
+
+        const res = await fetch("https://pay.pesapal.com/v3/api/Transactions/SubmitOrderRequest", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+        const redirectUrl = result.redirect_url;
+
+        window.location.href = redirectUrl;
+
+      } catch (error) {
+        console.error("Payment error:", error);
+        status.innerText = "An error occurred during payment. Please try again.";
+      }
+    });
+  </script>
+</body>
+</html>
